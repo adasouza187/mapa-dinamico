@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GeoSpot – Fase 0</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;font-family:Segoe UI,Arial,sans-serif}
+  body{display:flex;height:100vh;background:#0f172a;color:#e2e8f0}
+  #mapa{flex:1}
+  #painel{width:30%;min-width:320px;overflow-y:auto;padding:18px;background:#111827;transition:.3s}
+  #painel.fechado{width:0;min-width:0;padding:0;overflow:hidden}
+  #toggle{position:absolute;top:12px;right:12px;z-index:1000;background:#6366f1;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+  h1{font-size:20px;margin-bottom:4px} h1 span{color:#818cf8}
+  .sub{font-size:12px;color:#94a3b8;margin-bottom:14px}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .btns button{background:#1e293b;color:#cbd5e1;border:1px solid #334155;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px}
+  .btns button.ativo{background:#6366f1;color:#fff;border-color:#6366f1}
+  .card{background:#1e293b;border-radius:12px;padding:14px;margin-bottom:12px}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{background:#0f172a;border-radius:8px;padding:10px}
+  .kpi b{display:block;font-size:18px;color:#a5b4fc}
+  .kpi small{color:#94a3b8;font-size:11px}
+  details{font-size:12px;color:#94a3b8;margin-top:8px} summary{cursor:pointer;color:#818cf8}
+  .acao{width:100%;margin-top:8px;padding:8px;border:0;border-radius:8px;background:#334155;color:#fff;cursor:pointer}
+  table{width:100%;font-size:12px;border-collapse:collapse} td{padding:4px;border-bottom:1px solid #334155}
+  .legenda{background:#111827cc;padding:8px;border-radius:8px;color:#e2e8f0;font-size:11px}
+  .legenda i{display:inline-block;width:14px;height:10px;margin-right:4px}
+</style>
+</head>
+<body>
+<div id="mapa"></div>
+<button id="toggle">☰ Painel</button>
+<div id="painel">
+  <h1>Geo<span>Spot</span></h1>
+  <div class="sub">Distritos de SP · Fonte: IBGE, Censo 2022 · estimativas, não previsão de vendas</div>
+  <div class="btns" id="camadas"></div>
+  <div id="info" class="card">👆 Clique num distrito para ver o raio-X.</div>
+  <div id="comparar"></div>
+</div>
+
+<script>
+/* ===== CONFIGURAÇÃO DAS CAMADAS (o que cada cor significa) ===== */
+const BRL = v => "R$ " + Math.round(v).toLocaleString("pt-BR");
+const NUM = v => Math.round(v).toLocaleString("pt-BR");
+const CAMADAS = {
+  indice_publico:{nome:"Índice de Público", fmt:v=>NUM(v)+"/100",
+    como:"Média da posição do distrito (0 a 100) em densidade e em renda média, comparado aos demais distritos de SP. Alto = muita gente com poder de compra."},
+  renda_media:{nome:"Renda média", fmt:BRL, como:"Rendimento nominal médio mensal do responsável pelo domicílio (IBGE V06004)."},
+  dens:{nome:"Densidade", fmt:v=>NUM(v)+" hab/km²", como:"População (V0001) dividida pela área do distrito em km²."},
+  pop:{nome:"População", fmt:NUM, como:"Total de pessoas residentes (V0001)."},
+  pct_60:{nome:"% 60+ anos", fmt:v=>v+"%", como:"Pessoas com 60 anos ou mais divididas pela população total."}
+};
+const CORES = ["#1e1b4b","#3730a3","#6366f1","#a78bfa","#f0abfc"];
+const FAIXAS = ["0-4","5-9","10-14","15-19","20-24","25-29","30-39","40-49","50-59","60-69","70+"];
+let camada = "indice_publico", geo, cortes = [], fixado = null, grafico;
+
+/* ===== MAPA ===== */
+const mapa = L.map("mapa").setView([-23.55,-46.63], 9);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {attribution:"© OpenStreetMap © CARTO"}).addTo(mapa);
+
+fetch("dados/sp_distritos.geojson").then(r=>r.json()).then(dados=>{
+  geo = L.geoJSON(dados,{style:estilo,onEachFeature:(f,l)=>{
+    l.on({mouseover:e=>e.target.setStyle({weight:2,color:"#fff"}),
+          mouseout:e=>geo.resetStyle(e.target),
+          click:()=>mostrar(f.properties)});
+    l.bindTooltip(()=>`${f.properties.nome}<br>${CAMADAS[camada].fmt(f.properties[camada]??0)}`);
+  }}).addTo(mapa);
+  mapa.fitBounds(geo.getBounds());
+  trocarCamada(camada);
+});
+
+/* ===== CÁLCULO VISUAL: 5 faixas de cor por quantis ===== */
+function calcularCortes(){
+  const v = geo.toGeoJSON().features.map(f=>f.properties[camada]).filter(x=>x!=null).sort((a,b)=>a-b);
+  cortes = [0.2,0.4,0.6,0.8].map(q=>v[Math.floor(q*(v.length-1))]);
+}
+function cor(v){ if(v==null) return "#374151"; let i=0; while(i<4 && v>cortes[i]) i++; return CORES[i]; }
+function estilo(f){ return {fillColor:cor(f.properties[camada]),fillOpacity:.75,weight:.5,color:"#0f172a"}; }
+
+function trocarCamada(c){
+  camada = c; calcularCortes(); geo.setStyle(estilo); legenda.update();
+  document.querySelectorAll("#camadas button").forEach(b=>b.classList.toggle("ativo",b.dataset.c===c));
+}
+document.getElementById("camadas").innerHTML =
+  Object.entries(CAMADAS).map(([k,o])=>`<button data-c="${k}">${o.nome}</button>`).join("");
+document.querySelectorAll("#camadas button").forEach(b=>b.onclick=()=>trocarCamada(b.dataset.c));
+
+const legenda = L.control({position:"bottomleft"});
+legenda.onAdd = ()=>{ legenda._div=L.DomUtil.create("div","legenda"); return legenda._div; };
+legenda.update = ()=>{ const f=CAMADAS[camada].fmt;
+  legenda._div.innerHTML = `<b>${CAMADAS[camada].nome}</b><br>` + CORES.map((c,i)=>
+    `<i style="background:${c}"></i>${i===0?"até "+f(cortes[0]):i===4?"acima de "+f(cortes[3]):f(cortes[i-1])+" – "+f(cortes[i])}`).join("<br>"); };
+legenda.addTo(mapa);
+
+/* ===== PAINEL: raio-X do distrito ===== */
+function kpi(p,k){ return `<div class="kpi"><small>${CAMADAS[k].nome}</small><b>${p[k]!=null?CAMADAS[k].fmt(p[k]):"–"}</b></div>`; }
+function mostrar(p){
+  document.getElementById("info").innerHTML = `
+    <h3>${p.nome}</h3><div class="sub">${p.municipio}</div>
+    <div class="kpis">${Object.keys(CAMADAS).map(k=>kpi(p,k)).join("")}</div>
+    <canvas id="piramide" height="220" style="margin-top:12px"></canvas>
+    <details><summary>ℹ️ Como calculamos isto</summary>
+      ${Object.values(CAMADAS).map(o=>`<p><b>${o.nome}:</b> ${o.como}</p>`).join("")}
+    </details>
+    <button class="acao" id="btnFixar">📌 Fixar para comparar</button>`;
+  desenharPiramide(p);
+  document.getElementById("btnFixar").onclick=()=>{ fixado=p; document.getElementById("comparar").innerHTML=
+    `<div class="card">📌 <b>${p.nome}</b> fixado. Clique em outro distrito.</div>`; };
+  if(fixado && fixado.CD_DIST!==p.CD_DIST) comparar(fixado,p);
+}
+function desenharPiramide(p){
+  const h=(p.homens||"").split(",").map(Number), m=(p.mulheres||"").split(",").map(Number);
+  if(grafico) grafico.destroy();
+  grafico = new Chart(document.getElementById("piramide"),{type:"bar",
+    data:{labels:FAIXAS,datasets:[{label:"Homens",data:h.map(x=>-x),backgroundColor:"#6366f1"},
+                                  {label:"Mulheres",data:m,backgroundColor:"#f0abfc"}]},
+    options:{indexAxis:"y",plugins:{legend:{labels:{color:"#cbd5e1"}},
+      tooltip:{callbacks:{label:c=>c.dataset.label+": "+NUM(Math.abs(c.raw))}}},
+      scales:{x:{stacked:true,ticks:{color:"#94a3b8",callback:v=>NUM(Math.abs(v))}},
+              y:{stacked:true,ticks:{color:"#94a3b8"}}}}});
+}
+function comparar(a,b){
+  document.getElementById("comparar").innerHTML = `<div class="card"><h3>⚖️ Comparação</h3>
+    <table><tr><td></td><td><b>${a.nome}</b></td><td><b>${b.nome}</b></td></tr>
+    ${Object.entries(CAMADAS).map(([k,o])=>{
+      const va=a[k]??0, vb=b[k]??0;
+      return `<tr><td>${o.nome}</td><td style="color:${va>=vb?'#86efac':'#cbd5e1'}">${o.fmt(va)}</td>
+              <td style="color:${vb>va?'#86efac':'#cbd5e1'}">${o.fmt(vb)}</td></tr>`;}).join("")}
+    </table><button class="acao" onclick="fixado=null;this.parentElement.remove()">Limpar</button></div>`;
+}
+document.getElementById("toggle").onclick=()=>{ document.getElementById("painel").classList.toggle("fechado");
+  setTimeout(()=>mapa.invalidateSize(),350); };
+</script>
+</body>
+</html>

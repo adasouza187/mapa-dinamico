@@ -1,0 +1,7 @@
+Agora transforme isto num dashboard, usando o tipo Dashboard dos artifacts.
+Acrescente:
+
+Uma fileira de cards no topo: total de distritos, população total, maior renda e maior proporção de 20 a 49 anos, com o nome do distrito em cada recorde.
+Dois gráficos abaixo do mapa: o Top 10 do cenário ativo em barras, e uma dispersão de renda contra proporção de 20 a 49 anos, com o tamanho da bolha pela população.
+Mantenha o mapa, o painel lateral e a troca de cenário como estão.
+Deixe um distrito pré-selecionado ao abrir, para o painel não começar vazio.

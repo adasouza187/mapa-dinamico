@@ -1,0 +1,11 @@
+Subi no contexto do projeto o zip SP_distritos_CD2022, com os cinco arquivos do
+shapefile da malha de distritos do IBGE, Censo 2022.
+
+Descompacte, filtre o município de São Paulo, código 3550308, e me diga:
+1. quantos polígonos encontrou
+2. se os códigos CD_DIST batem com os 96 distritos dos csv
+
+Depois me mostre apenas os contornos, em cinza, sem cor nenhuma. Quero conferir
+a forma da cidade antes de colorir qualquer coisa.
+
+Sobre a pendência: use a renda média, V06004.

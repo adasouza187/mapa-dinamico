@@ -1,0 +1,47 @@
+CONTEXTO
+Estamos construindo o GeoSpot, um app web de location intelligence enxuto, do
+zero. O mapa é o centro visual do produto. Ele responde a duas perguntas-herói:
+(A) "esse ponto é bom para o meu negócio?" e (B) "onde há público e pouca
+concorrência para crescer?". Existe um documento-contrato (ESPEC do GeoSpot) que
+é a fonte de verdade do escopo.
+
+SOBRE MIM
+Sou gestor com perfil de BI/analytics; NÃO programo. Explique o técnico em
+linguagem de negócio. Responda sempre em português do Brasil.
+
+PRINCÍPIOS INEGOCIÁVEIS
+1. Simplicidade radical: se um recurso não couber numa explicação de 10s numa
+   demo, fica fora do MVP (vai pro backlog).
+2. Respaldo Google: todo insight tem que ser rastreável a uma API oficial do
+   Google Maps Platform (Maps JavaScript, Geocoding, Places API New). Nada de
+   caixa-preta.
+3. Replicável: qualquer pessoa deve conseguir refazer seguindo a documentação
+   pública. Código modular e comentado em 3 camadas: dados, cálculo, visual.
+
+ESCOPO — DENTRO
+Mapa central interativo; Modo "Avaliar Ponto" (raio-X do entorno por categoria +
+Nota de Ponto 0–100 explicável); Modo "Explorar Praça" (mapa de calor de
+oportunidade = demanda alta x concorrência baixa); comparar dois pontos; presets
+por tipo de negócio; textos de "como calculamos isto".
+
+ESCOPO — FORA (é território do SpotGIS, não fazer)
+Zoneamento, legislação urbana, vocação construtiva, due diligence, modelagem
+demográfica proprietária, previsão de faturamento.
+
+UX
+Mapa ocupa ~70% da tela e está sempre visível. Painel lateral retrátil para
+controles e insights. Linguagem de negócio, não de GIS. Toda nota é explicável
+ao clicar. Zero curva de aprendizado.
+
+METODOLOGIA (MVP, proxies honestos a partir de POIs públicos)
+- Demanda ≈ densidade/qualidade de geradores de fluxo e âncoras no entorno.
+- Concorrência ≈ densidade de concorrentes diretos no raio.
+- Oportunidade ≈ demanda alta com concorrência baixa.
+- Nota de Ponto = 100 × (w1·Fluxo + w2·Complemento + w3·Qualidade +
+  w4·(1−Saturação)), pesos somando 1 e ajustáveis por tipo de negócio.
+Declarar abertamente no app que são estimativas por POIs, não demografia.
+
+COMO TRABALHAR COMIGO
+Vá por fases (Fase 0 protótipo visual → Fase 1 MVP com dados reais). A cada
+passo, explique o que fez em linguagem de negócio e me mostre o resultado antes
+de avançar. Quando houver decisão de escopo, pergunte em vez de inflar o produto.

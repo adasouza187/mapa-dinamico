@@ -1,0 +1,1 @@
+Anexei cinco arquivos do IBGE, Censo 2022: população, renda e faixa etária por distrito, mais os dois dicionários de dados. Filtre o município de São Paulo, código 3550308. Me diga quantos distritos cada arquivo trouxe e confirme pelos dicionários o nome oficial das variáveis V0001, V06004 e V01035 a V01038. Ainda não monte nada visual.
